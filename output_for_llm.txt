@@ -1,10 +1,18 @@
-﻿--- START OF FILE output.txt ---
+--- START OF FILE output_for_llm.txt ---
 
 File list:
+.husky/pre-commit
 eslint.config.js
+export_llm.js
 index.html
+output_for_llm.txt
 package.json
 src/App.jsx
+src/components/AudioVisualizer.jsx
+src/components/CallControls.jsx
+src/components/CallInterface.jsx
+src/components/TimeVoiceInfo.jsx
+src/components/VoiceSelector.jsx
 src/constants.js
 src/index.css
 src/main.jsx
@@ -12,6 +20,14 @@ src/play-worklet.js
 src/vad-processor.js
 src/worker.js
 vite.config.js
+
+===
+
+.husky/pre-commit
+
+npm run format
+npm run export_llm
+git update-index --again
 
 ===
 
@@ -54,6 +70,104 @@ export default [
 
 ===
 
+export_llm.js
+
+import fs from "fs";
+import ora from "ora";
+import chalk from "chalk";
+import { execSync } from "child_process";
+
+const OUTPUT_FILE = "output_for_llm.txt";
+
+const shouldIncludeFile = (file) => {
+  return (
+    !/^tests\//.test(file) &&
+    !/\.(exe|dll|obj|bin|pdb|cache|log|md)$/.test(file) &&
+    !/\.(jpg|jpeg|png|gif|bmp|ico|svg|webp|tiff)$/.test(file) &&
+    !/(node_modules|packages|dist|build|target)\//.test(file) &&
+    !/(\.vs|\.vscode|\.idea)\//.test(file) &&
+    !/\.min\.(js|css)$/.test(file) &&
+    !/\.git|\.DS_Store/.test(file) &&
+    !/(package-lock\.json|yarn\.lock|npm-shrinkwrap\.json)$/.test(file) &&
+    !/\.(csproj|sln|nuspec|nupkg)$/.test(file)
+  );
+};
+
+const runGitList = () => {
+  try {
+    const raw = execSync("git ls-files", { encoding: "utf8" });
+    const files = raw.split("\n").filter(Boolean).filter(shouldIncludeFile);
+    return files;
+  } catch (err) {
+    console.error(chalk.red("Error running git ls-files:", err.message));
+    process.exit(1);
+  }
+};
+
+const writeOutput = (files) => {
+  const sep = "===";
+  const header = `--- START OF FILE ${OUTPUT_FILE} ---\n\nFile list:\n`;
+  fs.writeFileSync(
+    OUTPUT_FILE,
+    header + files.join("\n") + "\n\n" + sep + "\n\n",
+    "utf8",
+  );
+
+  files.forEach((file, index) => {
+    fs.appendFileSync(OUTPUT_FILE, `${file}\n`, "utf8");
+
+    try {
+      const content = fs.readFileSync(file, "utf8");
+      fs.appendFileSync(OUTPUT_FILE, "\n" + content + "\n", "utf8");
+    } catch (e) {
+      fs.appendFileSync(
+        OUTPUT_FILE,
+        `\n[Error reading file: ${e.message}]\n`,
+        "utf8",
+      );
+    }
+
+    if (index !== files.length - 1) {
+      fs.appendFileSync(OUTPUT_FILE, `\n${sep}\n\n`, "utf8");
+    } else {
+      fs.appendFileSync(OUTPUT_FILE, `\n`, "utf8");
+    }
+  });
+};
+
+const main = async () => {
+  const spinner = ora("Getting file list...").start();
+  let files = [];
+  try {
+    files = runGitList();
+    spinner.succeed(`Found ${files.length} files`);
+  } catch (err) {
+    spinner.fail("Failed to get files");
+    console.error(err);
+  }
+
+  if (!files.length) {
+    console.warn(
+      chalk.yellow(
+        "⚠ No files matched the criteria or no files are tracked by Git. Exiting.",
+      ),
+    );
+    process.exit(0);
+  }
+
+  console.log(chalk.blue("Processing..."));
+  writeOutput(files);
+  console.log(chalk.green(`✓ Done. Output written to ${OUTPUT_FILE}`));
+};
+
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});
+
+
+===
+
 index.html
 
 <!doctype html>
@@ -73,6 +187,202 @@ index.html
 
 ===
 
+output_for_llm.txt
+
+--- START OF FILE output_for_llm.txt ---
+
+File list:
+.husky/pre-commit
+eslint.config.js
+export_llm.js
+index.html
+output_for_llm.txt
+package.json
+src/App.jsx
+src/components/AudioVisualizer.jsx
+src/components/CallControls.jsx
+src/components/CallInterface.jsx
+src/components/TimeVoiceInfo.jsx
+src/components/VoiceSelector.jsx
+src/constants.js
+src/index.css
+src/main.jsx
+src/play-worklet.js
+src/vad-processor.js
+src/worker.js
+vite.config.js
+
+===
+
+.husky/pre-commit
+
+npm run format
+npm run export_llm
+git update-index --again
+
+===
+
+eslint.config.js
+
+import js from "@eslint/js";
+import globals from "globals";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+
+export default [
+  { ignores: ["dist"] },
+  {
+    files: ["**/*.{js,jsx}"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        ecmaFeatures: { jsx: true },
+        sourceType: "module",
+      },
+    },
+    plugins: {
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      "no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
+    },
+  },
+];
+
+
+===
+
+export_llm.js
+
+import fs from "fs";
+import ora from "ora";
+import chalk from "chalk";
+import { execSync } from "child_process";
+
+const OUTPUT_FILE = "output_for_llm.txt";
+
+const shouldIncludeFile = (file) => {
+  return (
+    !/^tests\//.test(file) &&
+    !/\.(exe|dll|obj|bin|pdb|cache|log|md)$/.test(file) &&
+    !/\.(jpg|jpeg|png|gif|bmp|ico|svg|webp|tiff)$/.test(file) &&
+    !/(node_modules|packages|dist|build|target)\//.test(file) &&
+    !/(\.vs|\.vscode|\.idea)\//.test(file) &&
+    !/\.min\.(js|css)$/.test(file) &&
+    !/\.git|\.DS_Store/.test(file) &&
+    !/(package-lock\.json|yarn\.lock|npm-shrinkwrap\.json)$/.test(file) &&
+    !/\.(csproj|sln|nuspec|nupkg)$/.test(file)
+  );
+};
+
+const runGitList = () => {
+  try {
+    const raw = execSync("git ls-files", { encoding: "utf8" });
+    const files = raw.split("\n").filter(Boolean).filter(shouldIncludeFile);
+    return files;
+  } catch (err) {
+    console.error(chalk.red("Error running git ls-files:", err.message));
+    process.exit(1);
+  }
+};
+
+const writeOutput = (files) => {
+  const sep = "===";
+  const header = `--- START OF FILE ${OUTPUT_FILE} ---\n\nFile list:\n`;
+  fs.writeFileSync(
+    OUTPUT_FILE,
+    header + files.join("\n") + "\n\n" + sep + "\n\n",
+    "utf8",
+  );
+
+  files.forEach((file, index) => {
+    fs.appendFileSync(OUTPUT_FILE, `${file}\n`, "utf8");
+
+    try {
+      const content = fs.readFileSync(file, "utf8");
+      fs.appendFileSync(OUTPUT_FILE, "\n" + content + "\n", "utf8");
+    } catch (e) {
+      fs.appendFileSync(
+        OUTPUT_FILE,
+        `\n[Error reading file: ${e.message}]\n`,
+        "utf8",
+      );
+    }
+
+    if (index !== files.length - 1) {
+      fs.appendFileSync(OUTPUT_FILE, `\n${sep}\n\n`, "utf8");
+    } else {
+      fs.appendFileSync(OUTPUT_FILE, `\n`, "utf8");
+    }
+  });
+};
+
+const main = async () => {
+  const spinner = ora("Getting file list...").start();
+  let files = [];
+  try {
+    files = runGitList();
+    spinner.succeed(`Found ${files.length} files`);
+  } catch (err) {
+    spinner.fail("Failed to get files");
+    console.error(err);
+  }
+
+  if (!files.length) {
+    console.warn(
+      chalk.yellow(
+        "⚠ No files matched the criteria or no files are tracked by Git. Exiting.",
+      ),
+    );
+    process.exit(0);
+  }
+
+  console.log(chalk.blue("Processing..."));
+  writeOutput(files);
+  console.log(chalk.green(`✓ Done. Output written to ${OUTPUT_FILE}`));
+};
+
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});
+
+
+===
+
+index.html
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Transformers.js | Speech-to-speech demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
+
+===
+
+output_for_llm.txt
+
+
+===
+
 package.json
 
 {
@@ -84,13 +394,18 @@ package.json
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prepare": "husky",
+    "format": "prettier --write .",
+    "export_llm": "node export_llm.js"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.5.2",
     "@tailwindcss/vite": "^4.1.4",
+    "chalk": "^5.4.1",
     "kokoro-js": "^1.2.1",
     "lucide-react": "^0.503.0",
+    "ora": "^8.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.1.4"
@@ -104,6 +419,8 @@ package.json
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.5.3",
     "vite": "^6.3.1"
   }
 }
@@ -252,7 +569,7 @@ export default function App() {
         }
 
         await inputAudioContext.audioWorklet.addModule(
-          new URL("./vad-processor.js", import.meta.url)
+          new URL("./vad-processor.js", import.meta.url),
         );
         worklet = new AudioWorkletNode(inputAudioContext, "vad-processor", {
           numberOfInputs: 1,
@@ -282,7 +599,7 @@ export default function App() {
 
         node.current = new AudioWorkletNode(
           outputAudioContext,
-          "buffered-audio-worklet-processor"
+          "buffered-audio-worklet-processor",
         );
 
         node.current.port.onmessage = (event) => {
@@ -300,7 +617,7 @@ export default function App() {
         outputAnalyser.connect(outputAudioContext.destination);
 
         const outputDataArray = new Uint8Array(
-          outputAnalyser.frequencyBinCount
+          outputAnalyser.frequencyBinCount,
         );
 
         function updateVisualizers() {
@@ -406,7 +723,6 @@ export default function App() {
         >
           🤗 Transformers.js
         </a>
-
         Strongly inspired from{" "}
         <a
           href="https://github.com/huggingface/transformers.js-examples/tree/main/conversational-webgpu"
@@ -420,6 +736,263 @@ export default function App() {
     </div>
   );
 }
+
+
+===
+
+src/components/AudioVisualizer.jsx
+
+export const AudioVisualizer = ({
+  callStarted,
+  ripples,
+  error,
+  ready,
+  speakingScale,
+  listeningScale,
+  isListening,
+  isSpeaking,
+}) => {
+  const getStatusText = () => {
+    if (error) return error;
+    if (!ready) return "Loading...";
+    if (isListening) return "Listening...";
+    if (isSpeaking) return "Speaking...";
+    return "";
+  };
+
+  const getRingColor = (shade = "200") => {
+    return error ? `bg-red-${shade}` : `bg-green-${shade}`;
+  };
+
+  const getTextColor = () => {
+    return error ? "text-red-700" : "text-gray-700";
+  };
+
+  return (
+    <div className="relative flex items-center justify-center w-32 h-32 flex-shrink-0 aspect-square">
+      {/* Ripples */}
+      {callStarted &&
+        ripples.map((id) => (
+          <div
+            key={id}
+            className="absolute inset-0 rounded-full border-2 border-green-200 pointer-events-none"
+            style={{ animation: "ripple 1.5s ease-out forwards" }}
+          />
+        ))}
+
+      {/* Pulsing loader while initializing */}
+      <div
+        className={`absolute w-32 h-32 rounded-full ${getRingColor()} ${
+          !ready ? "animate-ping opacity-75" : ""
+        }`}
+        style={{ animationDuration: "1.5s" }}
+      />
+
+      {/* Main rings */}
+      <div
+        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor(
+          "300",
+        )} ${!ready ? "opacity-0" : ""}`}
+        style={{ transform: `scale(${speakingScale})` }}
+      />
+
+      <div
+        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor(
+          "200",
+        )} ${!ready ? "opacity-0" : ""}`}
+        style={{ transform: `scale(${listeningScale})` }}
+      />
+
+      {/* Center status text */}
+      <div className={`absolute z-10 text-lg text-center ${getTextColor()}`}>
+        {getStatusText()}
+      </div>
+    </div>
+  );
+};
+export default AudioVisualizer;
+
+
+===
+
+src/components/CallControls.jsx
+
+import { Mic, PhoneOff } from "lucide-react";
+
+export const CallControls = ({
+  callStarted,
+  ready,
+  onStartCall,
+  onEndCall,
+}) => {
+  return (
+    <div className="space-y-4 w-[140px]">
+      {callStarted ? (
+        <button
+          className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+          onClick={onEndCall}
+        >
+          <PhoneOff className="w-5 h-5" />
+          <span>End call</span>
+        </button>
+      ) : (
+        <button
+          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${
+            ready
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+              : "bg-blue-100 text-blue-700 opacity-50 cursor-not-allowed"
+          }`}
+          onClick={onStartCall}
+          disabled={!ready}
+        >
+          <Mic className="w-5 h-5" />
+          <span>Start call</span>
+        </button>
+      )}
+    </div>
+  );
+};
+export default CallControls;
+
+
+===
+
+src/components/CallInterface.jsx
+
+import { TimeVoiceInfo } from "./TimeVoiceInfo";
+import { AudioVisualizer } from "./AudioVisualizer";
+import { CallControls } from "./CallControls";
+
+export const CallInterface = ({
+  // Voice and timer props
+  voices,
+  selectedVoice,
+  elapsedTime,
+  onVoiceChange,
+
+  // Audio visualizer props
+  callStarted,
+  ripples,
+  error,
+  ready,
+  speakingScale,
+  listeningScale,
+  isListening,
+  isSpeaking,
+
+  // Call controls props
+  onStartCall,
+  onEndCall,
+}) => {
+  return (
+    <div className="h-full max-h-[320px] w-[640px] bg-white rounded-xl shadow-lg p-8 flex items-center justify-between space-x-16">
+      <TimeVoiceInfo
+        voices={voices}
+        selectedVoice={selectedVoice}
+        elapsedTime={elapsedTime}
+        ready={ready}
+        onVoiceChange={onVoiceChange}
+      />
+
+      <AudioVisualizer
+        callStarted={callStarted}
+        ripples={ripples}
+        error={error}
+        ready={ready}
+        speakingScale={speakingScale}
+        listeningScale={listeningScale}
+        isListening={isListening}
+        isSpeaking={isSpeaking}
+      />
+
+      <CallControls
+        callStarted={callStarted}
+        ready={ready}
+        onStartCall={onStartCall}
+        onEndCall={onEndCall}
+      />
+    </div>
+  );
+};
+export default CallInterface;
+
+
+===
+
+src/components/TimeVoiceInfo.jsx
+
+import { VoiceSelector } from "./VoiceSelector";
+
+export const TimeVoiceInfo = ({
+  voices,
+  selectedVoice,
+  elapsedTime,
+  ready,
+  onVoiceChange,
+}) => {
+  return (
+    <div className="text-green-700 w-[140px]">
+      <div className="text-xl font-bold flex justify-between">
+        {voices?.[selectedVoice]?.name}
+        <span className="font-normal text-gray-500">{elapsedTime}</span>
+      </div>
+      <VoiceSelector
+        voices={voices}
+        selectedVoice={selectedVoice}
+        ready={ready}
+        onVoiceChange={onVoiceChange}
+      />
+    </div>
+  );
+};
+export default TimeVoiceInfo;
+
+
+===
+
+src/components/VoiceSelector.jsx
+
+import { ChevronDown } from "lucide-react";
+
+export const VoiceSelector = ({
+  voices,
+  selectedVoice,
+  ready,
+  onVoiceChange,
+}) => {
+  return (
+    <div className="text-base relative">
+      <button
+        type="button"
+        disabled={!ready}
+        className={`w-full flex items-center justify-between border border-gray-300 rounded-md transition-colors ${
+          ready
+            ? "bg-transparent hover:border-gray-400"
+            : "bg-gray-100 opacity-50 cursor-not-allowed"
+        }`}
+      >
+        <span className="px-2 py-1">Select voice</span>
+        <ChevronDown className="absolute right-2" />
+      </button>
+      <select
+        value={selectedVoice}
+        onChange={(e) => onVoiceChange(e.target.value)}
+        className="absolute inset-0 opacity-0 cursor-pointer"
+        disabled={!ready}
+      >
+        {Object.entries(voices).map(([key, v]) => (
+          <option key={key} value={key}>
+            {`${v.name} (${v.language === "en-us" ? "American" : v.language} ${
+              v.gender
+            })`}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+export default VoiceSelector;
 
 
 ===

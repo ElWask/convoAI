@@ -1,5 +1,4 @@
 import fs from "fs";
-import ora from "ora";
 import chalk from "chalk";
 import { execSync } from "child_process";
 
@@ -25,7 +24,7 @@ const runGitList = () => {
     const files = raw.split("\n").filter(Boolean).filter(shouldIncludeFile);
     return files;
   } catch (err) {
-    console.error(chalk.red("Error running git ls-files:", err.message));
+    console.error(chalk.red("❌ Error running git ls-files:", err.message));
     process.exit(1);
   }
 };
@@ -62,20 +61,19 @@ const writeOutput = (files) => {
 };
 
 const main = async () => {
-  const spinner = ora("Getting file list...").start();
+  console.log("Getting file list...");
   let files = [];
   try {
     files = runGitList();
-    spinner.succeed(`Found ${files.length} files`);
+    console.log(chalk.green(`✅ Found ${files.length} files`));
   } catch (err) {
-    spinner.fail("Failed to get files");
-    console.error(err);
+    console.error(chalk.red("❌ Failed to get files:", err.message));
   }
 
   if (!files.length) {
     console.warn(
       chalk.yellow(
-        "⚠ No files matched the criteria or no files are tracked by Git. Exiting.",
+        "⚠️ No files matched the criteria or no files are tracked by Git. Exiting.",
       ),
     );
     process.exit(0);
@@ -83,10 +81,10 @@ const main = async () => {
 
   console.log(chalk.blue("Processing..."));
   writeOutput(files);
-  console.log(chalk.green(`✓ Done. Output written to ${OUTPUT_FILE}`));
+  console.log(chalk.green(`✅ Done. Output written to ${OUTPUT_FILE}`));
 };
 
 main().catch((err) => {
-  console.error("Fatal error:", err);
+  console.error("❌ Fatal error:", err);
   process.exit(1);
 });

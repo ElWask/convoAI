@@ -1,3 +1,2 @@
 npm run format
 npm run export_llm
-git update-index --again

@@ -27,7 +27,6 @@ vite.config.js
 
 npm run format
 npm run export_llm
-git update-index --again
 
 ===
 
@@ -216,7 +215,6 @@ vite.config.js
 
 npm run format
 npm run export_llm
-git update-index --again
 
 ===
 

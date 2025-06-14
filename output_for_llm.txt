@@ -14,6 +14,8 @@ src/components/CallInterface.jsx
 src/components/TimeVoiceInfo.jsx
 src/components/VoiceSelector.jsx
 src/constants.js
+src/hooks/useCallTimer.js
+src/hooks/useRippleEffects.js
 src/index.css
 src/main.jsx
 src/play-worklet.js
@@ -202,6 +204,8 @@ src/components/CallInterface.jsx
 src/components/TimeVoiceInfo.jsx
 src/components/VoiceSelector.jsx
 src/constants.js
+src/hooks/useCallTimer.js
+src/hooks/useRippleEffects.js
 src/index.css
 src/main.jsx
 src/play-worklet.js
@@ -427,6 +431,9 @@ import { useEffect, useState, useRef } from "react";
 import { INPUT_SAMPLE_RATE } from "./constants";
 import { CallInterface } from "./components/CallInterface";
 
+import { useCallTimer } from "./hooks/useCallTimer";
+import { useRippleEffects } from "./hooks/useRippleEffects";
+
 import WORKLET from "./play-worklet.js";
 
 export default function App() {
@@ -441,11 +448,12 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [listeningScale, setListeningScale] = useState(1);
   const [speakingScale, setSpeakingScale] = useState(1);
-  const [ripples, setRipples] = useState([]);
+  const ripples = useRippleEffects(callStarted);
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState("00:00");
+  const elapsedTime = useCallTimer(callStarted, callStartTime);
+
   const worker = useRef(null);
 
   const micStreamRef = useRef(null);
@@ -466,20 +474,6 @@ export default function App() {
       });
     }
   }, [callStarted]);
-
-  useEffect(() => {
-    if (callStarted && callStartTime) {
-      const interval = setInterval(() => {
-        const diff = Math.floor((Date.now() - callStartTime) / 1000);
-        const minutes = String(Math.floor(diff / 60)).padStart(2, "0");
-        const seconds = String(diff % 60).padStart(2, "0");
-        setElapsedTime(`${minutes}:${seconds}`);
-      }, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setElapsedTime("00:00");
-    }
-  }, [callStarted, callStartTime]);
 
   useEffect(() => {
     worker.current ??= new Worker(new URL("./worker.js", import.meta.url), {
@@ -644,18 +638,6 @@ export default function App() {
     };
   }, [callStarted]);
 
-  useEffect(() => {
-    if (!callStarted) return;
-    const interval = setInterval(() => {
-      const id = Date.now();
-      setRipples((prev) => [...prev, id]);
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r !== id));
-      }, 1500);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [callStarted]);
-
   const handleStartCall = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -716,6 +698,7 @@ export default function App() {
         >
           🤗 Transformers.js
         </a>
+        <br />
         Strongly inspired from{" "}
         <a
           href="https://github.com/huggingface/transformers.js-examples/tree/main/conversational-webgpu"
@@ -753,8 +736,15 @@ export const AudioVisualizer = ({
     return "";
   };
 
-  const getRingColor = (shade = "200") => {
-    return error ? `bg-red-${shade}` : `bg-green-${shade}`;
+  const getRingColor = (shade = 200) => {
+    // Since Tailwind scans your source files as plain text,
+    // it has no way of understanding string concatenation or interpolation.
+    switch (shade) {
+      case 300:
+        return error ? "bg-red-300" : "bg-green-300";
+      default:
+        return error ? "bg-red-200" : "bg-green-200";
+    }
   };
 
   const getTextColor = () => {
@@ -775,24 +765,18 @@ export const AudioVisualizer = ({
 
       {/* Pulsing loader while initializing */}
       <div
-        className={`absolute w-32 h-32 rounded-full ${getRingColor()} ${
-          !ready ? "animate-ping opacity-75" : ""
-        }`}
+        className={`absolute w-32 h-32 rounded-full bg-green-200 ${getRingColor()} ${!ready ? "animate-ping opacity-75" : ""}`}
         style={{ animationDuration: "1.5s" }}
       />
 
       {/* Main rings */}
       <div
-        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor(
-          "300",
-        )} ${!ready ? "opacity-0" : ""}`}
+        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor(300)} ${!ready ? "opacity-0" : ""}`}
         style={{ transform: `scale(${speakingScale})` }}
       />
 
       <div
-        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor(
-          "200",
-        )} ${!ready ? "opacity-0" : ""}`}
+        className={`absolute w-32 h-32 rounded-full shadow-inner transition-transform duration-300 ease-out ${getRingColor()} ${!ready ? "opacity-0" : ""}`}
         style={{ transform: `scale(${listeningScale})` }}
       />
 
@@ -1049,6 +1033,61 @@ export const MAX_NUM_PREV_BUFFERS = Math.ceil(
 
 ===
 
+src/hooks/useCallTimer.js
+
+import { useEffect, useState } from "react";
+
+export const useCallTimer = (callStarted, callStartTime) => {
+  const [elapsedTime, setElapsedTime] = useState("00:00");
+
+  useEffect(() => {
+    if (callStarted && callStartTime) {
+      const interval = setInterval(() => {
+        const diff = Math.floor((Date.now() - callStartTime) / 1000);
+        const minutes = String(Math.floor(diff / 60)).padStart(2, "0");
+        const seconds = String(diff % 60).padStart(2, "0");
+        setElapsedTime(`${minutes}:${seconds}`);
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setElapsedTime("00:00");
+    }
+  }, [callStarted, callStartTime]);
+
+  return elapsedTime;
+};
+
+
+===
+
+src/hooks/useRippleEffects.js
+
+import { useEffect, useState } from "react";
+
+export const useRippleEffects = (callStarted) => {
+  const [ripples, setRipples] = useState([]);
+
+  useEffect(() => {
+    if (!callStarted) return;
+
+    const interval = setInterval(() => {
+      const id = Date.now();
+      setRipples((prev) => [...prev, id]);
+
+      setTimeout(() => {
+        setRipples((prev) => prev.filter((r) => r !== id));
+      }, 1500);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [callStarted]);
+
+  return ripples;
+};
+
+
+===
+
 src/index.css
 
 @import "tailwindcss";
@@ -1171,32 +1210,30 @@ let globalBuffer = new Float32Array(MIN_CHUNK_SIZE);
 class VADProcessor extends AudioWorkletProcessor {
   process(inputs, outputs, parameters) {
     const buffer = inputs[0][0];
-    if (!buffer) return; // buffer is null when the stream ends
+    if (!buffer) return true; // Keep processor alive
 
-    if (buffer.length > MIN_CHUNK_SIZE) {
-      // If the buffer is larger than the minimum chunk size, send the entire buffer
-      this.port.postMessage({ buffer });
+    if (buffer.length >= MIN_CHUNK_SIZE) {
+      // Changed > to >=
+      // Send a copy of the buffer
+      this.port.postMessage({ buffer: new Float32Array(buffer) });
     } else {
       const remaining = MIN_CHUNK_SIZE - globalPointer;
       if (buffer.length >= remaining) {
-        // If the buffer is larger than (or equal to) the remaining space in the global buffer, copy the remaining space
         globalBuffer.set(buffer.subarray(0, remaining), globalPointer);
 
-        // Send the global buffer
-        this.port.postMessage({ buffer: globalBuffer });
+        // Send a copy of the global buffer
+        this.port.postMessage({ buffer: new Float32Array(globalBuffer) });
 
-        // Reset the global buffer and set the remaining buffer
         globalBuffer.fill(0);
         globalBuffer.set(buffer.subarray(remaining), 0);
         globalPointer = buffer.length - remaining;
       } else {
-        // If the buffer is smaller than the remaining space in the global buffer, copy the buffer to the global buffer
         globalBuffer.set(buffer, globalPointer);
         globalPointer += buffer.length;
       }
     }
 
-    return true; // Keep the processor alive
+    return true;
   }
 }
 

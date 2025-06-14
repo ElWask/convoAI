@@ -127,7 +127,7 @@ export default function App() {
         }
 
         await inputAudioContext.audioWorklet.addModule(
-          new URL("./vad-processor.js", import.meta.url)
+          new URL("./vad-processor.js", import.meta.url),
         );
         worklet = new AudioWorkletNode(inputAudioContext, "vad-processor", {
           numberOfInputs: 1,
@@ -157,7 +157,7 @@ export default function App() {
 
         node.current = new AudioWorkletNode(
           outputAudioContext,
-          "buffered-audio-worklet-processor"
+          "buffered-audio-worklet-processor",
         );
 
         node.current.port.onmessage = (event) => {
@@ -175,7 +175,7 @@ export default function App() {
         outputAnalyser.connect(outputAudioContext.destination);
 
         const outputDataArray = new Uint8Array(
-          outputAnalyser.frequencyBinCount
+          outputAnalyser.frequencyBinCount,
         );
 
         function updateVisualizers() {

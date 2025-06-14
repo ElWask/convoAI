@@ -21,14 +21,14 @@ export const AudioVisualizer = ({
     // it has no way of understanding string concatenation or interpolation.
     switch (shade) {
       case 300:
-        return error ? 'bg-red-300' : 'bg-green-300';
+        return error ? "bg-red-300" : "bg-green-300";
       default:
-        return error ? 'bg-red-200' : 'bg-green-200';
+        return error ? "bg-red-200" : "bg-green-200";
     }
   };
 
   const getTextColor = () => {
-    return error ? 'text-red-700' : 'text-gray-700';
+    return error ? "text-red-700" : "text-gray-700";
   };
 
   return (

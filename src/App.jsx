@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { INPUT_SAMPLE_RATE } from "./constants";
 import { CallInterface } from "./components/CallInterface";
 
+import { useCallTimer } from "./hooks/useCallTimer";
+import { useRippleEffects } from "./hooks/useRippleEffects";
+
 import WORKLET from "./play-worklet.js";
 
 export default function App() {
@@ -16,11 +19,12 @@ export default function App() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [listeningScale, setListeningScale] = useState(1);
   const [speakingScale, setSpeakingScale] = useState(1);
-  const [ripples, setRipples] = useState([]);
+  const ripples = useRippleEffects(callStarted);
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState("00:00");
+  const elapsedTime = useCallTimer(callStarted, callStartTime);
+
   const worker = useRef(null);
 
   const micStreamRef = useRef(null);
@@ -41,20 +45,6 @@ export default function App() {
       });
     }
   }, [callStarted]);
-
-  useEffect(() => {
-    if (callStarted && callStartTime) {
-      const interval = setInterval(() => {
-        const diff = Math.floor((Date.now() - callStartTime) / 1000);
-        const minutes = String(Math.floor(diff / 60)).padStart(2, "0");
-        const seconds = String(diff % 60).padStart(2, "0");
-        setElapsedTime(`${minutes}:${seconds}`);
-      }, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setElapsedTime("00:00");
-    }
-  }, [callStarted, callStartTime]);
 
   useEffect(() => {
     worker.current ??= new Worker(new URL("./worker.js", import.meta.url), {
@@ -137,7 +127,7 @@ export default function App() {
         }
 
         await inputAudioContext.audioWorklet.addModule(
-          new URL("./vad-processor.js", import.meta.url),
+          new URL("./vad-processor.js", import.meta.url)
         );
         worklet = new AudioWorkletNode(inputAudioContext, "vad-processor", {
           numberOfInputs: 1,
@@ -167,7 +157,7 @@ export default function App() {
 
         node.current = new AudioWorkletNode(
           outputAudioContext,
-          "buffered-audio-worklet-processor",
+          "buffered-audio-worklet-processor"
         );
 
         node.current.port.onmessage = (event) => {
@@ -185,7 +175,7 @@ export default function App() {
         outputAnalyser.connect(outputAudioContext.destination);
 
         const outputDataArray = new Uint8Array(
-          outputAnalyser.frequencyBinCount,
+          outputAnalyser.frequencyBinCount
         );
 
         function updateVisualizers() {
@@ -217,18 +207,6 @@ export default function App() {
 
       outputAudioContext?.close();
     };
-  }, [callStarted]);
-
-  useEffect(() => {
-    if (!callStarted) return;
-    const interval = setInterval(() => {
-      const id = Date.now();
-      setRipples((prev) => [...prev, id]);
-      setTimeout(() => {
-        setRipples((prev) => prev.filter((r) => r !== id));
-      }, 1500);
-    }, 1000);
-    return () => clearInterval(interval);
   }, [callStarted]);
 
   const handleStartCall = async () => {
@@ -291,6 +269,7 @@ export default function App() {
         >
           🤗 Transformers.js
         </a>
+        <br />
         Strongly inspired from{" "}
         <a
           href="https://github.com/huggingface/transformers.js-examples/tree/main/conversational-webgpu"
